@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PING PONG</title>
+    <style>
+      * {
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+      }  
+    </style>
+</head>
+<body>
+    <canvas></canvas>
+    <script>
+        const canvasE1 = document.querySelector("canvas"),
+      canvasCtx = canvasE1.getContext("2d");
+const lineWidth = 3;
+const gapX = 10;
+const maxBallSpeed = 10; // Velocidade máxima da bola
+const maxPaddleSpeed = 5; // Velocidade máxima da raquete direita
+
+const mouse = { x: 0, y: 0 };
+
+//⭐ campo
+const field = {
+    w: window.innerWidth,
+    h: window.innerHeight,
+    draw: function() {
+        // Preenche campo
+        canvasCtx.fillStyle = "#f2a7e4";
+        canvasCtx.fillRect(0, 0, this.w, this.h);
+    },
+};
+
+//⭐ cria linha central
+const line = {
+    w: 5,
+    h: field.h,
+    draw: function() {
+        // Desenha linha central
+        canvasCtx.fillStyle = "#eb289d";
+        canvasCtx.fillRect(field.w / 2 - this.w / 2, 0, this.w, this.h);
+    },
+};
+
+const score = {
+    player1: 0,
+    computer: 0,
+    increaseplayer1: function () {
+        this.player1++;
+    },
+    increasecomputer: function() {
+        this.computer++;
+    },
+    draw: function() {
+        canvasCtx.font = "bold 55px Arial";
+        canvasCtx.textAlign = "center";
+        canvasCtx.textBaseline = "top";
+        canvasCtx.fillStyle = "#ffffff";
+        canvasCtx.fillText(this.player1, field.w / 4, 50);
+        canvasCtx.fillText(this.computer, field.w / 2 + field.w / 4, 50);
+    },
+};
+
+//⭐ e anima raquete esquerda
+const leftPaddle = {
+    x: gapX,
+    y: field.h / 2,
+    w: line.w,
+    h: 200,
+    _move: function() {
+        this.y = mouse.y - this.h / 2;
+
+        // Limita o movimento para não sair do campo
+        if (this.y < 0) {
+            this.y = 0;
+        }
+        if (this.y + this.h > field.h) {
+            this.y = field.h - this.h;
+        }
+    },
+    draw: function() {
+        // Desenho da raquete esquerda
+        canvasCtx.fillStyle = "#eb289d";
+        canvasCtx.fillRect(this.x, this.y, this.w, this.h);
+        this._move();
+    },
+};
+
+//⭐ cria e anima raquete direita
+ const rightPaddle = {
+    x: field.w - line.w - gapX,
+    y: field.h / 2,
+    w: line.w,
+    h: 200,
+    speed: 1,
+    _move: function() {
+        if (this.y + this.h / 2 < ball.y + ball.r) {
+            this.y += this.speed;
+        } else {
+            this.y -= this.speed;
+        }
+
+        // Limita o movimento para não sair do campo
+        if (this.y < 0) {
+            this.y = 0;
+        }
+        if (this.y + this.h > field.h) {
+            this.y = field.h - this.h;
+        }
+    },
+    speedUp: function() {
+        if (this.speed < maxPaddleSpeed) {
+            this.speed++;
+        }
+    },
+    draw: function() {
+        // Desenho da raquete direita
+        canvasCtx.fillStyle = "#ffffff";
+        canvasCtx.fillRect(this.x, this.y, this.w, this.h);
+        this._move();
+    },
+};
+
+// ⭐ cria e anima bolinha
+const ball = {
+    x: field.w / 2,
+    y: field.h / 2,
+    r: 20,
+    speed: 4,
+    directionX: 1,
+    directionY: 1,
+    // Calcula a posição vertical da bola (eixo Y)
+    _calcPosition: function() {
+        // Verifica se o jogador fez um ponto 
+        if (this.x > field.w - this.r - rightPaddle.w - gapX) {
+            if (this.y + this.r > rightPaddle.y &&
+                this.y - this.r < rightPaddle.y + rightPaddle.h) {
+                this._reverseX();
+            } else {
+                // Faz ponto
+                score.increaseplayer1();
+                this._pointUp();
+            }
+        }
+
+        // Verifica se o PC fez ponto
+        if (this.x < this.r + leftPaddle.w + gapX) {
+            // Posição da raquete no eixo Y
+            if (this.y + this.r > leftPaddle.y &&
+                this.y - this.r < leftPaddle.y + leftPaddle.h) {
+                // Rebate a bola
+                this._reverseX();
+            } else {
+                // Faz ponto
+                score.increasecomputer();
+                this._pointUp();
+            }
+        }
+
+        // Verifica colisão com as bordas superior e inferior
+        if ((this.y > field.h - this.r && this.directionY > 0) || 
+            (this.y - this.r < 0 && this.directionY < 0)) {
+            this._reverseY();
+        }
+    },
+    _reverseX: function() {
+        this.directionX *= -1;
+    },
+    _reverseY: function() {
+        this.directionY *= -1;
+    },
+    _speedUp: function() {
+        if (this.speed < maxBallSpeed) {
+            this.speed += 1; // Incrementa a velocidade mais suavemente
+        }
+    },
+    _pointUp: function() {
+        this.x = field.w / 2;
+        this.y = field.h / 2;
+
+        this._reverseX();
+        this._speedUp();
+        rightPaddle.speedUp();
+    },
+    _move: function() {
+        this.x += this.directionX * this.speed;
+        this.y += this.directionY * this.speed;
+    },
+    draw: function() {
+        // Desenho da bola
+        canvasCtx.fillStyle = "#eb289d";
+        canvasCtx.beginPath();
+        canvasCtx.arc(this.x, this.y, this.r, 0, 2 * Math.PI, false);
+        canvasCtx.fill();
+        this._calcPosition();
+        this._move();
+    },
+};
+        //⭐ início do programa
+        function setup() {
+            canvasE1.width = window.innerWidth;
+            canvasE1.height = window.innerHeight;
+        }
+        
+        //função que desenha tudo na tela
+        function draw() {
+
+            field.draw()
+            line.draw()
+
+            leftPaddle.draw()
+            rightPaddle.draw()
+
+            ball.draw()
+            score.draw()
+        }
+        window.animateFrame = (function () {
+        return (
+        window.requestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.oRequestAnimationFrame ||
+            window.msRequestAnimationFrame ||
+            function (callback) {
+                return window.setTimeout (callback, 1000 / 60)
+            }
+        )
+        })()
+
+        function main()
+        {
+            animateFrame(main)
+            draw()
+        }
+
+        setup()
+        main()
+
+        canvasE1.addEventListener('mousemove', function(e) {
+            mouse.x = e.pageX
+            mouse.y = e.pageY
+        })
+        setInterval(draw, 1000 / 60)
+    </script>
+</body>
+</html>
