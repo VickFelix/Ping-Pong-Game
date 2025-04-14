@@ -1,3 +1,1 @@
-# Ping-Pong-Game
-
-Um jogo simples e rápido você vs PC :)
+Esse projeto foi para aprender novos conceitos em HTML
